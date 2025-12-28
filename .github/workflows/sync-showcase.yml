@@ -1,0 +1,65 @@
+name: Sync UI to Public Showcase
+
+on:
+  push:
+    branches:
+      - main 
+
+jobs:
+  sync-to-public:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Private Repo (Master)
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Checkout Public Repo (Target)
+        uses: actions/checkout@v3
+        with:
+          repository: syafiqeil/Portfolio-Dev-Web3 
+          token: ${{ secrets.API_TOKEN_GITHUB }}
+          path: public-temp-folder
+
+      - name: Sync Files & Remove Backend Secrets
+        run: |
+          # Konfigurasi identitas untuk commit di repo publik
+          git config --global user.email "syafnabil12@gmail.com"
+          git config --global user.name "Syafiqeil"
+
+          # Eksekusi sinkronisasi
+          # --delete: menghapus file di publik jika di private sudah dihapus
+          # --exclude: daftar file/folder yang DILARANG masuk ke publik
+          rsync -av --progress . public-temp-folder \
+            --exclude '.git' \
+            --exclude '.github' \
+            --exclude 'node_modules' \
+            --exclude '.env' \
+            --exclude '.env.local' \
+            --exclude '.vercel' \
+            --exclude 'public-temp-folder' \
+            --exclude 'app/api' \
+            --exclude 'app/lib/x402-evm.ts' \
+            --exclude 'app/lib/session.ts' \
+            --exclude 'UserProfile.sol' \
+            --delete
+
+          # Penjelasan Exclude (Keamanan):
+          # app/api: Seluruh endpoint backend (SIWE, Gasless, dll)
+          # app/lib/x402-evm.ts: Logika verifikasi blockchain
+          # app/lib/session.ts: Kunci enkripsi sesi
+          # UserProfile.sol: Source code smart contract
+
+      - name: Push to Public Repo
+        run: |
+          cd public-temp-folder
+          
+          # Cek apakah ada perubahan
+          if [[ -n $(git status -s) ]]; then
+            git add .
+            git commit -m "Showcase Update: ${{ github.event.head_commit.message }}"
+            git push origin main
+            echo "✅ Sukses update repo publik"
+          else
+            echo "⚠️ Tidak ada perubahan pada UI, skip push."
+          fi
