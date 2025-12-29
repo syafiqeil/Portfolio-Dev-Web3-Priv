@@ -42,6 +42,7 @@ jobs:
             --exclude 'app/lib/x402-evm.ts' \
             --exclude 'app/lib/session.ts' \
             --exclude 'UserProfile.sol' \
+            --exclude 'README.md'
             --delete
 
           # Penjelasan Exclude (Keamanan):
